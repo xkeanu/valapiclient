@@ -118,9 +118,10 @@ class ValClient:
             return None
 
     def get_region(self):
-        response = self.handle_local_request("product-session/v1/external-sessions").get_json()
-        if response:
-            for key, region_info in response.items():
+        response = self.handle_local_request("product-session/v1/external-sessions")
+        if response and response.status_code == 200:
+            response_json = response.json()
+            for key, region_info in response_json.items():
                 if key != 'host_app':
                     arguments = region_info.get("launchConfiguration", {}).get("arguments", [])
                     for arg in arguments:
@@ -281,7 +282,3 @@ class ValClient:
 
     def get_current_player_puuid(self):
         return self.get_current_player()["sub"]
-
-
-
-

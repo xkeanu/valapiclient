@@ -69,3 +69,11 @@ class LocalEndpoints:
         else:
             print(f"Failed to get player settings: {response.status_code if response else 'No response'}")
             return None
+
+    def get_presence(self):
+        response = self.api.handle_local_request("chat/v4/presences")
+        if response and response.status_code == 200:
+            return response.json().get("presences", [])
+        else:
+            print(f"Failed to get presence data: {response.status_code if response else 'No response'}")
+            return None
