@@ -12,13 +12,18 @@ def main():
     #print(f'Player: {api.get_current_player()}')
 
     #print(api.pregame.get_current_pregame())
+    #print(f'Player: {api.get_current_player()}')
+
+    #print(api.pregame.get_current_pregame())
 
     #print(api.pregame.lock_pregame_agent("e370fa57-4757-3604-3648-499e1f642d3f"))
 
     #print(api.coregame.get_current_match_id())
+    #print(api.coregame.get_current_match_id())
 
     #print(f'Party: {api.party.get_current_party()}')
 
+    #print(api.coregame.get_current_match_info(api.coregame.get_current_match_id()))
     #print(api.coregame.get_current_match_info(api.coregame.get_current_match_id()))
 
     #print(api.coregame.get_current_match_loadout(api.coregame.get_current_match_id()))
