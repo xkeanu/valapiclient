@@ -1,146 +1,146 @@
+import requests
+from typing import Optional, Dict, List
+
 class PvPEndpoints:
     def __init__(self, api):
         self.api = api
 
-    def get_content(self):
-        header = self.api.base_pvp_header.copy()
-        header.update({
-            "X-Riot-ClientPlatform": self.api.client_platform,
-            "X-Riot-ClientVersion": self.api.client_version['riotClientVersion']
-        })
-        prefix = self.api.get_shared_url()
-        response = self.api.handle_pvp_request("content-service/v3/content", prefix=prefix, header=header)
-        if response and response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to get content: {response.status_code if response else 'No response'}")
-            return None
-
-    def get_account_xp(self, puuid: str):
-        header = self.api.base_pvp_header.copy()
+    def _get_auth_header(self) -> Optional[Dict[str, str]]:
+        """Helper function to fetch authentication headers."""
         auth_info = self.api.get_auth_info()
         if not auth_info:
             print("Authentication info not available.")
             return None
+        header = self.api.base_pvp_header.copy()
         header["X-Riot-Entitlements-JWT"] = auth_info[1]
-        prefix = self.api.get_pd_url()
-        response = self.api.handle_pvp_request(f"account-xp/v1/players/{puuid}", header=header, prefix=prefix)
-        if response and response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to get account XP: {response.status_code if response else 'No response'}")
-            return None
+        return header
 
-    def get_player_loadout(self, puuid: str):
-        header = self.api.base_pvp_header.copy()
-        auth_info = self.api.get_auth_info()
-        if not auth_info:
-            print("Authentication info not available.")
-            return None
-        header["X-Riot-Entitlements-JWT"] = auth_info[1]
-        prefix = self.api.get_pd_url()
-        response = self.api.handle_pvp_request(f"personalization/v2/players/{puuid}/playerloadout", header=header, prefix=prefix)
-        if response and response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to get player loadout: {response.status_code if response else 'No response'}")
-            return None
-
-    def update_player_loadout(self, puuid: str, new_loadout: dict) -> bool:
-        header = self.api.base_pvp_header.copy()
-        auth_info = self.api.get_auth_info()
-        if not auth_info:
-            print("Authentication info not available.")
+    def _validate_puuid(self, puuid: str) -> bool:
+        """Helper function to validate a PUUID."""
+        if not puuid or not isinstance(puuid, str):
+            print("Invalid PUUID.")
             return False
-        header["X-Riot-Entitlements-JWT"] = auth_info[1]
-        prefix = self.api.get_pd_url()
-        response = self.api.handle_pvp_request(f"personalization/v2/players/{puuid}/playerloadout",
-                                               header=header, method="PUT", json_data=new_loadout, prefix=prefix)
-        if response and response.status_code == 200:
-            print("Player loadout updated successfully.")
-            return True
-        else:
-            print(f"Failed to update player loadout: {response.status_code if response else 'No response'}")
-            return False
+        return True
 
-    def get_player_mmr(self, puuid: str):
-        header = self.api.base_pvp_header.copy()
-        header.update({
-            "X-Riot-ClientPlatform": self.api.client_platform,
-            "X-Riot-ClientVersion": self.api.client_version['riotClientVersion'],
-            "X-Riot-Entitlements-JWT": self.api.get_auth_info()[1]
-        })
-        response = self.api.handle_pvp_request(f"mmr/v1/players/{puuid}", header=header)
-        if response and response.status_code == 200:
+    def get_content(self) -> Optional[Dict]:
+        """Fetches the current content (e.g., maps, agents, etc.) from the Valorant API."""
+        try:
+            header = self._get_auth_header()
+            if not header:
+                return None
+            prefix = self.api.get_shared_url()
+            response = self.api.handle_pvp_request("content-service/v3/content", prefix=prefix, header=header)
+            response.raise_for_status()  # Raise an exception for non-200 status codes
             return response.json()
-        else:
-            print(f"Failed to get player MMR: {response.status_code if response else 'No response'}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching content: {e}")
             return None
 
-    def get_match_history(self, puuid: str):
-        header = self.api.base_pvp_header.copy()
-        auth_info = self.api.get_auth_info()
-        if not auth_info:
-            print("Authentication info not available.")
+    def get_account_xp(self, puuid: str) -> Optional[Dict]:
+        """Fetches the account XP for a given player (PUUID)."""
+        if not self._validate_puuid(puuid):
             return None
-        header["X-Riot-Entitlements-JWT"] = auth_info[1]
-        prefix = self.api.get_pd_url()
-        response = self.api.handle_pvp_request(f"match-history/v1/history/{puuid}", header=header, prefix=prefix)
-        if response and response.status_code == 200:
+        try:
+            header = self._get_auth_header()
+            if not header:
+                return None
+            prefix = self.api.get_shared_url()
+            response = self.api.handle_pvp_request(f"account-xp/v1/players/{puuid}", prefix=prefix, header=header)
+            response.raise_for_status()
             return response.json()
-        else:
-            print(f"Failed to get match history: {response.status_code if response else 'No response'}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching account XP: {e}")
             return None
 
-    def get_match_details(self, matchID: str):
-        header = self.api.base_pvp_header.copy()
-        auth_info = self.api.get_auth_info()
-        if not auth_info:
-            print("Authentication info not available.")
+    def get_player_mmr(self, puuid: str) -> Optional[Dict]:
+        """Fetches the matchmaking rating (MMR) for a given player (PUUID)."""
+        if not self._validate_puuid(puuid):
             return None
-        header["X-Riot-Entitlements-JWT"] = auth_info[1]
-        prefix = self.api.get_pd_url()
-        response = self.api.handle_pvp_request(f"match-details/v1/matches/{matchID}", header=header, prefix=prefix)
-        if response and response.status_code == 200:
+        try:
+            header = self._get_auth_header()
+            if not header:
+                return None
+            prefix = self.api.get_pd_url()
+            response = self.api.handle_pvp_request(f"mmr/v1/players/{puuid}", prefix=prefix, header=header)
+            response.raise_for_status()
             return response.json()
-        else:
-            print(f"Failed to get match details: {response.status_code if response else 'No response'}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching player MMR: {e}")
             return None
 
-    def get_player_restrictions(self):
-        header = self.api.base_pvp_header.copy()
-        auth_info = self.api.get_auth_info()
-        if not auth_info:
-            print("Authentication info not available.")
+    def get_match_history(self, puuid: str, start_index: int = 0, end_index: int = 20) -> Optional[Dict]:
+        """Fetches the match history for a given player (PUUID)."""
+        if not self._validate_puuid(puuid):
             return None
-        header["X-Riot-Entitlements-JWT"] = auth_info[1]
-        prefix = self.api.get_pd_url()
-        response = self.api.handle_pvp_request("restrictions/v3/penalties", header=header, prefix=prefix)
-        if response and response.status_code == 200:
+        try:
+            header = self._get_auth_header()
+            if not header:
+                return None
+            prefix = self.api.get_shared_url()
+            response = self.api.handle_pvp_request(
+                f"match-history/v1/history/{puuid}?startIndex={start_index}&endIndex={end_index}",
+                prefix=prefix,
+                header=header
+            )
+            response.raise_for_status()
             return response.json()
-        else:
-            print(f"Failed to get player restrictions: {response.status_code if response else 'No response'}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching match history: {e}")
             return None
 
-    def get_player_name(self, puuid: str):
-        header = self.api.base_pvp_header.copy()
-        auth_info = self.api.get_auth_info()
-        if not auth_info:
-            print("Authentication info not available.")
+    def get_current_game(self, puuid: str) -> Optional[Dict]:
+        """Fetches the current game details for a given player (PUUID)."""
+        if not self._validate_puuid(puuid):
             return None
-        header["X-Riot-Entitlements-JWT"] = auth_info[1]
-        header["Authorization"] = f"Bearer {auth_info[0]}"
-        prefix = self.api.get_pd_url()
-        body = [puuid]
+        try:
+            header = self._get_auth_header()
+            if not header:
+                return None
+            prefix = self.api.get_shared_url()
+            response = self.api.handle_pvp_request(f"current-game/v1/players/{puuid}", prefix=prefix, header=header)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching current game: {e}")
+            return None
 
-        response = self.api.handle_pvp_request("name-service/v2/players", prefix=prefix, header=header, method="PUT", json_data=body)
-        if response and response.status_code == 200:
-            player_info = response.json()[0]
-            return {
-                "DisplayName": player_info.get("DisplayName"),
-                "GameName": player_info.get("GameName"),
-                "TagLine": player_info.get("TagLine")
-            }
-        else:
-            print(f"Failed to retrieve player name: {response.status_code if response else 'No response'}")
+    def get_leaderboard(self, season_id: str, start_index: int = 0, end_index: int = 20) -> Optional[Dict]:
+        """Fetches the leaderboard for a given season."""
+        if not season_id or not isinstance(season_id, str):
+            print("Invalid season ID.")
+            return None
+        try:
+            header = self._get_auth_header()
+            if not header:
+                return None
+            prefix = self.api.get_shared_url()
+            response = self.api.handle_pvp_request(
+                f"leaderboards/v2/{season_id}?startIndex={start_index}&endIndex={end_index}",
+                prefix=prefix,
+                header=header
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching leaderboard: {e}")
+            return None
+
+    def get_competitive_updates(self, puuid: str, start_index: int = 0, end_index: int = 20) -> Optional[Dict]:
+        """Fetches competitive updates for a given player (PUUID)."""
+        if not self._validate_puuid(puuid):
+            return None
+        try:
+            header = self._get_auth_header()
+            if not header:
+                return None
+            prefix = self.api.get_shared_url()
+            response = self.api.handle_pvp_request(
+                f"competitive-updates/v1/players/{puuid}?startIndex={start_index}&endIndex={end_index}",
+                prefix=prefix,
+                header=header
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching competitive updates: {e}")
             return None

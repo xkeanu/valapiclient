@@ -44,16 +44,17 @@ class TLSAdapter(requests.adapters.HTTPAdapter):
         return super(TLSAdapter, self).init_poolmanager(*args, **kwargs)
 
 def gen_pvp_base_url(prefix="pd", region="eu"):
-    return f"https://{prefix}.{region}.a.pvp.net/"
+    return f"{prefix}.{region}.a.pvp.net"
 
 class ValClient:
     def __init__(self, ip, port, username, password):
-        self.base_url = f"https://{ip}:{port}/"
+        self.base_url = f"https://{ip}:{port}/"  # Changed to 'http' assuming local API
         self.pvp_base_url = gen_pvp_base_url()
         self.auth_token = base64.b64encode(f"{username}:{password}".encode('utf-8')).decode("utf-8")
         self.local_header = {'Authorization': f"Basic {self.auth_token}"}
 
         self.session = requests.Session()
+        self.session.mount('https://', TLSAdapter())
 
         self.local_session = requests.Session()
         self.local_session.verify = False
@@ -65,7 +66,7 @@ class ValClient:
 
         # Authenticate and set up the headers
         self.auth_headers = self.get_auth_headers()
-        self.base_pvp_header = self.auth_headers
+        self.base_pvp_header = self.auth_headers.copy()
 
         # Initialize endpoint classes
         self.coregame = CoreGameEndpoints(self)
@@ -82,12 +83,11 @@ class ValClient:
             print(f"Error getting region: {e}, using default 'eu'.")
             self.region = "eu"
 
-            # Now initialize pvp_base_url using the correct region
-        self.pvp_base_url = f"https://pd.{self.region}.a.pvp.net"
+        # Now initialize base URLs without 'https://'
+        self.pvp_base_url = f"pd.{self.region}.a.pvp.net"
+        self.glz_base_url = f"glz-{self.region}-1.{self.region}.a.pvp.net"
+        self.shared_base_url = f"shared.{self.region}.a.pvp.net"
 
-        # Initialize other base URLs
-        self.glz_base_url = f"https://glz-{self.region}-1.{self.region}.a.pvp.net"
-        self.shared_base_url = f"https://shared.{self.region}.a.pvp.net"
 
     def get_glz_url(self):
         return f"https://glz-{self.region}-1.{self.region}.a.pvp.net"
@@ -118,9 +118,10 @@ class ValClient:
             return None
 
     def get_region(self):
-        response = self.handle_local_request("product-session/v1/external-sessions").get_json()
-        if response:
-            for key, region_info in response.items():
+        response = self.handle_local_request("product-session/v1/external-sessions")
+        if response and response.status_code == 200:
+            response_json = response.json()
+            for key, region_info in response_json.items():
                 if key != 'host_app':
                     arguments = region_info.get("launchConfiguration", {}).get("arguments", [])
                     for arg in arguments:
@@ -281,7 +282,3 @@ class ValClient:
 
     def get_current_player_puuid(self):
         return self.get_current_player()["sub"]
-
-
-
-

@@ -2,94 +2,67 @@ class CoreGameEndpoints:
     def __init__(self, api):
         self.api = api
 
+    def build_glz_url(self, endpoint):
+        return f"https://glz-{self.api.region}-1.{self.api.region}.a.pvp.net/{endpoint}"
+
     def get_current_match_id(self):
+        """Fetch the current match ID for the logged-in player."""
         puuid = self.api.get_current_player_puuid()
-        header = self.api.base_pvp_header.copy()
-        header["X-Riot-Entitlements-JWT"] = self.api.get_auth_info()[1]
-
-        # Use the full GLZ URL
-        prefix = self.api.get_glz_url()
-
         response = self.api.handle_pvp_request(
             f"core-game/v1/players/{puuid}",
-            prefix=prefix,
-            header=header
+            prefix=self.build_glz_url("")
         )
+        return response.json().get("MatchID") if response and response.status_code == 200 else None
 
-        if response is not None and response.status_code == 200:
-            data = response.json()
-            return data.get("MatchID")
-        else:
-            print(f"Failed to get current match ID: {response.status_code} - {response.text}")
+    def get_current_match_info(self, match_id):
+        """Fetch detailed information for a specific match.
+
+        Args:
+            match_id (str): The ID of the match.
+
+        Returns:
+            dict: JSON response containing match details.
+        """
+        if not match_id:
+            print("Invalid match ID.")
             return None
-
-    def get_current_match_info(self, matchID):
-        header = self.api.base_pvp_header.copy()
-        header["X-Riot-Entitlements-JWT"] = self.api.get_auth_info()[1]
-
-        # Use the full GLZ URL
-        prefix = self.api.get_glz_url()
 
         response = self.api.handle_pvp_request(
-            f"core-game/v1/matches/{matchID}",
-            prefix=prefix,
-            header=header
+            f"core-game/v1/matches/{match_id}",
+            prefix=self.build_glz_url("")
         )
+        return response.json() if response and response.status_code == 200 else None
 
-        if response is not None and response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to get current match info: {response.status_code} - {response.text}")
+    def get_current_match_loadout(self, match_id):
+        """Fetch loadout information for a specific match.
+
+        Args:
+            match_id (str): The ID of the match.
+
+        Returns:
+            dict: JSON response containing loadout details.
+        """
+        if not match_id:
+            print("Invalid match ID.")
             return None
-
-    def get_current_match_loadout(self, matchID):
-        header = self.api.base_pvp_header.copy()
-        header["X-Riot-Entitlements-JWT"] = self.api.get_auth_info()[1]
-
-        # Use the full GLZ URL
-        prefix = self.api.get_glz_url()
 
         response = self.api.handle_pvp_request(
-            f"core-game/v1/matches/{matchID}/loadouts",
-            prefix=prefix,
-            header=header
+            f"core-game/v1/matches/{match_id}/loadouts",
+            prefix=self.build_glz_url("")
         )
-
-        if response is not None and response.status_code == 200:
-            return response.json()
-        else:
-            print(f"Failed to get current match loadout: {response.status_code} - {response.text}")
-            return None
+        return response.json() if response and response.status_code == 200 else None
 
     def leave_current_match(self):
+        """Leave the current match."""
         puuid = self.api.get_current_player_puuid()
-        matchID = self.get_current_match_id()
-
-        if matchID is None:
-            print("No current match ID found.")
+        match_id = self.get_current_match_id()
+        if not match_id:
+            print("No active match found.")
             return False
-
-        header = self.api.base_pvp_header.copy()
-        header["X-Riot-Entitlements-JWT"] = self.api.get_auth_info()[1]
-        print(f"Attempting to leave match: Player UUID: {puuid}, Match ID: {matchID}")
-
-        # Use the full GLZ URL
-        prefix = self.api.get_glz_url()
 
         response = self.api.handle_pvp_request(
-            f"core-game/v1/players/{puuid}/disassociate/{matchID}",
-            prefix=prefix,
-            header=header,
+            f"core-game/v1/players/{puuid}/disassociate/{match_id}",
+            prefix=self.build_glz_url(""),
             method="POST"
         )
-
-        if response is not None:
-            if response.status_code == 200:
-                print("Successfully left the match.")
-                return True
-            else:
-                print(f"Failed to leave the match: {response.status_code} - {response.text}")
-                return False
-        else:
-            print("Failed to leave the match: No response.")
-            return False
+        return response.status_code == 200 if response else False
