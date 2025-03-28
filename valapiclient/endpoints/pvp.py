@@ -1,5 +1,6 @@
 import requests
 from typing import Optional, Dict, List, Union
+from urllib.parse import urlencode
 
 class PvPEndpoints:
     def __init__(self, api):
@@ -125,19 +126,44 @@ class PvPEndpoints:
             print(f"Error fetching leaderboard: {e}")
             return None
 
-    def get_competitive_updates(self, puuid: str, start_index: int = 0, end_index: int = 20) -> Optional[Dict]:
-        """Fetches competitive updates for a given player (PUUID)."""
+    def get_competitive_updates(self, puuid: str, start_index: int = 0, end_index: int = 10, queue: Optional[str] = None) -> Optional[Dict]:
+        """
+        Get recent games and how they changed ranking for a given player (PUUID).
+
+        Args:
+            puuid: The player's UUID.
+            start_index: The index of the first match to return. Defaults to 0.
+            end_index: The index of the last match to return. Defaults to 10.
+            queue: The queue to filter by (e.g., 'competitive', 'unrated'). Defaults to all queues.
+
+        Returns:
+            A dictionary containing the competitive updates, or None if an error occurs.
+        """
         if not self._validate_puuid(puuid):
             return None
         try:
             header = self._get_auth_header()
             if not header:
                 return None
-            prefix = self.api.get_shared_url()
+            prefix = self.api.get_pd_url() # Use pd URL as per documentation
+
+            # Construct query parameters dictionary
+            query_params = {
+                "startIndex": start_index,
+                "endIndex": end_index,
+            }
+            if queue:
+                query_params["queue"] = queue
+
+            # Encode query parameters and append to the endpoint path
+            query_string = urlencode(query_params)
+            endpoint_with_params = f"mmr/v1/players/{puuid}/competitiveupdates?{query_string}"
+
             response = self.api.handle_pvp_request(
-                f"competitive-updates/v1/players/{puuid}?startIndex={start_index}&endIndex={end_index}",
+                endpoint_with_params, # Pass the full path with query string
                 prefix=prefix,
                 header=header
+                # No 'params' argument here
             )
             response.raise_for_status()
             return response.json()
