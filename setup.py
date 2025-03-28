@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '1.1.4'
+VERSION = '1.1.7'
 DESCRIPTION = 'Python package for Unofficial Valorant API'
 LONG_DESCRIPTION = 'A package that allows you to interact with the Valorant API.'
 

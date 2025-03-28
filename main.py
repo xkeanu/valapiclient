@@ -38,7 +38,7 @@ def main():
     #print(api.pvp.get_account_xp(api.get_current_player_puuid()))
     #print(api.pvp.get_player_loadout(api.get_current_player_puuid()))
 
-    #print(api.pvp.get_player_name('914fd2ca-2614-5322-bddd-0c22a1fa1b00'))
+    print(api.pvp.get_player_name('914fd2ca-2614-5322-bddd-0c22a1fa1b00'))
 
     #print(api.pregame.dodge_pregame_match())
 

@@ -1,5 +1,5 @@
 import requests
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 
 class PvPEndpoints:
     def __init__(self, api):
@@ -143,4 +143,80 @@ class PvPEndpoints:
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Error fetching competitive updates: {e}")
+            return None
+
+    def get_player_name(self, puuids: Union[str, List[str]]) -> Optional[List[Dict]]:
+        """
+        Fetches player names and taglines by their PUUIDs.
+        
+        Args:
+            puuids: Single UUID string or list of player UUIDs to look up
+            
+        Returns:
+            List of dictionaries containing player name information:
+            [
+                {
+                    "DisplayName": str,
+                    "Subject": str,
+                    "GameName": str,
+                    "TagLine": str
+                },
+                ...
+            ]
+        """
+        # Convert single UUID to list
+        if isinstance(puuids, str):
+            puuids = [puuids]
+            
+        if not puuids or not isinstance(puuids, list) or not all(isinstance(p, str) for p in puuids):
+            print("Invalid PUUID(s).")
+            return None
+            
+        try:
+            header = self._get_auth_header()
+            if not header:
+                return None
+                
+            prefix = self.api.get_pd_url()
+            response = self.api.handle_pvp_request(
+                "name-service/v2/players",
+                method="PUT",
+                prefix=prefix,
+                header=header,
+                json_data=puuids
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching player names: {e}")
+            return None
+
+    def get_match_details(self, match_id: str) -> Optional[Dict]:
+        """
+        Fetches the details of a specific match by its ID.
+
+        Args:
+            match_id: The ID of the match to fetch details for.
+
+        Returns:
+            A dictionary containing the match details, or None if an error occurs.
+        """
+        if not match_id or not isinstance(match_id, str):
+            print("Invalid Match ID.")
+            return None
+        try:
+            header = self._get_auth_header()
+            if not header:
+                return None
+            # The get_pd_url() method should construct the base URL including the shard
+            prefix = self.api.get_pd_url() 
+            response = self.api.handle_pvp_request(
+                f"match-details/v1/matches/{match_id}",
+                prefix=prefix,
+                header=header
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching match details for match ID {match_id}: {e}")
             return None
